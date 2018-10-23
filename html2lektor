@@ -1,0 +1,38 @@
+set -e
+# depends: pip install html2text
+# https://github.com/Alir3z4/html2text/blob/master/docs/usage.md
+
+cd $(dirname $0)/..
+
+# step 0: build html files
+make html
+
+# step 1: generate markdown files
+for file in $(find html -name '*.html')
+do
+  md=$(echo $file|sed -E "s/html/md/g")
+  echo -ne "\rConverting $file to $md"
+  dir=$(dirname $md)
+  [ -d $dir ] || mkdir -p $dir
+  html2text $file > $md
+done
+
+# step 2: copy files to ./content
+cd html
+for file in $(find -name '*.md')
+do
+  cp $file ../lektor/content/$file
+done
+
+# step 3: add files to git
+cd ../lektor
+find content -name '*.md' -exec git add {} +
+
+# step 4: commit - will ask for a message
+git commit -m "Update markdown files"
+git commit --amend
+
+# step 5: verify result
+find -name '*.md' -exec less {} +
+
+echo -e "\nDone."
